@@ -1,0 +1,8 @@
+matplotlib
+numpy
+tensorboard
+torch
+torchvision
+opencv-python
+transformers
+imgaug

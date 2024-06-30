@@ -23,16 +23,18 @@ from model import TransformerLoss as transformerLoss
 
 from nocs_dataset import NOCSTrain
 
-def setup_environment(gpu_id):
-    if len(sys.argv) != 3:
-        print("Usage: python3 train.py <gpu_id> <obj_id>")
+def setup_environment():
+    if len(sys.argv) != 4:
+        print("Usage: python3 train.py <gpu_id> <obj_id> </path/to/dataset>")
         sys.exit()
 
-    if gpu_id == '-1':
-        gpu_id = ''
-    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+    if sys.argv[1] == '-1':
+        sys.argv[1] = ''
+    os.environ['CUDA_VISIBLE_DEVICES'] = sys.argv[1]
      
 def main():
+    setup_environment()
+    
     max_epochs = 50
     batch_size = 16
 
@@ -43,12 +45,12 @@ def main():
     beta2 = 0.999
     epsilon = 1e-8
 
-    setup_environment(sys.argv[1])
     
     obj_id = sys.argv[2]
+    dataset_path = sys.argv[3]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset_train = NOCSTrain(data_root = "/hdd2/nocs_category_level_v2", size=256, obj_id=obj_id, crop_object = True, fraction=1.0, augment=True)
+    dataset_train = NOCSTrain(data_root=dataset_path, size=256, obj_id=obj_id, crop_object=True, fraction=1.0, augment=True)
     
     train_dataloader = torch.utils.data.DataLoader(
         dataset_train,
@@ -154,5 +156,5 @@ def main():
         epoch += 1
 
 # Run the main function
-if __name__ == "__main__":
+if __name__ == "__main__":    
     main()
