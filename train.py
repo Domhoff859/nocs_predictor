@@ -38,7 +38,7 @@ def main():
     max_epochs = 50
     batch_size = 16
 
-    augmentation_prob=1.0
+    augmentation_prob=0.5
     imsize = 128
     lr = 1e-3
     beta1 = 0.9

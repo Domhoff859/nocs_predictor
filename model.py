@@ -101,8 +101,12 @@ class Autoencoder(nn.Module):
             DecoderBlock(128, 128, 5, 1, 0),   # fuer d3_uni   
         ])
 
-        self.final_decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 6, kernel_size=5, stride=2, padding=2, output_padding=1),
+        self.final_decoder_star = nn.Sequential(
+            nn.ConvTranspose2d(128, 3, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.Tanh()
+        )
+        self.final_decoder_dash = nn.Sequential(
+            nn.ConvTranspose2d(128, 3, kernel_size=5, stride=2, padding=2, output_padding=1),
             nn.Tanh()
         )
 
@@ -152,41 +156,7 @@ class Autoencoder(nn.Module):
         d3_uni = self.decoder[7](d3_uni) 
         #print("d3_uni:", d3_uni.shape)        
 
-        decoded = self.final_decoder(d3_uni)
+        decoded_star = self.final_decoder_star(d3_uni)
+        decoded_dash = self.final_decoder_dash(d3_uni)
 
-        return decoded
-
-
-class DCGAN_discriminator(nn.Module):
-    def __init__(self):
-        super(DCGAN_discriminator, self).__init__()
-
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu1 = nn.LeakyReLU(0.2)
-
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
-        self.bn2 = nn.BatchNorm2d(128)
-        self.relu2 = nn.LeakyReLU(0.2)
-
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
-        self.bn3 = nn.BatchNorm2d(256)
-        self.relu3 = nn.LeakyReLU(0.2)
-
-        self.conv4 = nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1)
-        self.bn4 = nn.BatchNorm2d(256)
-        self.relu4 = nn.LeakyReLU(0.2)
-
-        self.flatten = nn.Flatten()
-        self.fc_out = nn.Linear(256 * 8 * 8, 1)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        x = self.relu1(self.bn1(self.conv1(x)))
-        x = self.relu2(self.bn2(self.conv2(x)))
-        x = self.relu3(self.bn3(self.conv3(x)))
-        x = self.relu4(self.bn4(self.conv4(x)))
-        x = self.flatten(x)
-        x = self.fc_out(x)
-        x = self.sigmoid(x)
-        return x
+        return decoded_star, decoded_dash
