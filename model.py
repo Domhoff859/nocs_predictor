@@ -102,7 +102,7 @@ class Autoencoder(nn.Module):
         ])
 
         self.final_decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 3, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.ConvTranspose2d(128, 6, kernel_size=5, stride=2, padding=2, output_padding=1),
             nn.Tanh()
         )
 

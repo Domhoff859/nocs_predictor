@@ -117,11 +117,19 @@ def main():
         for step, batch in enumerate(train_dataloader):
             start_time_iteration = time.time()
             rgb_images_gt = batch["rgb"].to(device)
-            xyz_images_gt = batch["nocs"].to(device)
+            # xyz_images_gt = batch["nocs"].to(device)
+            star_image_gt = batch["star"].to(device)
+            dash_image_gt = batch["dash"].to(device)
 
-            xyz_images_estimated = generator(rgb_images_gt)
-            output = mse_loss(xyz_images_estimated, xyz_images_gt)
-            #loss_transformer = transformer_loss([input, target])   -> needs to be modified
+            star_dash_estimated = generator(rgb_images_gt)
+            star_esimated = star_dash_estimated[:,0:3,:,:]
+            dash_estimated = star_dash_estimated[:,3:6,:,:]
+            
+            
+            
+            
+            # output = mse_loss(xyz_images_estimated, xyz_images_gt)
+            # loss_transformer = transformer_loss([input, target])   -> needs to be modified
 
             optimizer_generator.zero_grad()
             output.backward()

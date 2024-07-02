@@ -18,6 +18,7 @@ import imageio
 class NOCSBase(Dataset):
     def __init__(self, data_root, size, obj_id, fraction=1.0, crop_object=False, augment=False, interpolation="bicubic"):
         self.rgb_paths, self.nocs_paths = [], []
+        self.star_paths, self.dash_paths = [], []
 
         self.size = size
         self.fraction = fraction
@@ -28,9 +29,13 @@ class NOCSBase(Dataset):
         
         rgb_root = os.path.join(data_root, "rgb")
         nocs_root = os.path.join(data_root, "nocs")
+        star_root = os.path.join(data_root, "star")
+        dash_root = os.path.join(data_root, "dash")
 
         rgb_files = [file for file in sorted(os.listdir(rgb_root)) if file.endswith(".png")]
         nocs_files = [file for file in sorted(os.listdir(nocs_root)) if file.endswith(".png")]
+        star_files = [file for file in sorted(os.listdir(star_root)) if file.endswith(".npy")]
+        dash_files = [file for file in sorted(os.listdir(dash_root)) if file.endswith(".npy")]
 
         # Determine how many samples to load based on fraction
         num_samples = int(len(rgb_files) * self.fraction)
@@ -38,9 +43,13 @@ class NOCSBase(Dataset):
 
         selected_rgb_files = [rgb_files[i] for i in selected_indices]
         selected_nocs_files = [nocs_files[i] for i in selected_indices]
+        selected_star_files = [star_files[i] for i in selected_indices]
+        selected_dash_files = [dash_files[i] for i in selected_indices]
         
         self.rgb_paths.extend([os.path.join(rgb_root, l) for l in selected_rgb_files])
         self.nocs_paths.extend([os.path.join(nocs_root, l) for l in selected_nocs_files])
+        self.star_paths.extend([os.path.join(star_root, l) for l in selected_star_files])
+        self.dash_paths.extend([os.path.join(dash_root, l) for l in selected_dash_files])
 
         self.interpolation = {"bilinear": Image.BILINEAR,
                               "bicubic": Image.BICUBIC,
@@ -56,6 +65,8 @@ class NOCSBase(Dataset):
         self.labels = {
             "rgb_file_path_": [l for l in self.rgb_paths],
             "nocs_file_path_": [l for l in self.nocs_paths],
+            "star_file_path_": [l for l in self.star_paths],
+            "dash_file_path_": [l for l in self.dash_paths],
         }
 
     def __len__(self):
@@ -145,6 +156,8 @@ class NOCSBase(Dataset):
 
     def __getitem__(self, i):
         nocs_img_array = (self.process_image(self.labels["nocs_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
+        star_img_array = np.array(np.load(self.labels["star_file_path_"][i]) / 127.5 - 1.0, dtype=np.float32)
+        dash_img_array = np.array(np.load(self.labels["dash_file_path_"][i]) / 127.5 - 1.0, dtype=np.float32)
         rgb_img_raw = self.process_image(self.labels["rgb_file_path_"][i], size=self.size, image_type="RGB")
 
         if self.augment == True:
@@ -155,10 +168,14 @@ class NOCSBase(Dataset):
         rgb_img_array = np.transpose(rgb_img_array, (2, 0, 1))
 
         nocs_img_array = np.transpose(nocs_img_array, (2, 0, 1))
+        star_img_array = np.transpose(star_img_array, (2, 0, 1))
+        dash_img_array = np.transpose(dash_img_array, (2, 0, 1))
 
         example = {
             "rgb": rgb_img_array,
             "nocs": nocs_img_array,
+            "star": star_img_array,
+            "dash": dash_img_array,
         }
         return example
 
