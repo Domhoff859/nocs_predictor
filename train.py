@@ -50,7 +50,7 @@ def main():
     dataset_path = sys.argv[3]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset_train = NOCSTrain(data_root=dataset_path, size=256, obj_id=obj_id, crop_object=True, fraction=1.0, augment=True)
+    dataset_train = NOCSTrain(data_root=dataset_path, size=imsize, augmentation_prob=augmentation_prob, obj_id=obj_id, crop_object=True, fraction=1.0, augment=True)
     
     train_dataloader = torch.utils.data.DataLoader(
         dataset_train,
@@ -122,8 +122,8 @@ def main():
             dash_image_gt = batch["dash"].to(device)
 
             star_dash_estimated = generator(rgb_images_gt)
-            star_esimated = star_dash_estimated[:,0:3,:,:]
-            dash_estimated = star_dash_estimated[:,3:6,:,:]
+            star_esimated = star_dash_estimated[:, :, 0:3]
+            dash_estimated = star_dash_estimated[:, :, 3:6]
             
             
             
