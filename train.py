@@ -99,7 +99,10 @@ def main():
 
     #transformer_loss = transformerLoss(sym=sym_pool)
 
-    mse_loss = torch.nn.MSELoss()
+    mse_loss_star = torch.nn.MSELoss()
+    mse_loss_dash = torch.nn.MSELoss()
+    mse_loss_mask = torch.nn.MSELoss()
+    mse_loss_destar = torch.nn.MSELoss()
 
     optimizer_generator = optim.Adam(generator.parameters(), lr=lr, betas=(beta1, beta2), eps=epsilon)
     scheduler_generator = optim.lr_scheduler.CosineAnnealingLR(optimizer_generator, max_epochs, eta_min=1e-7)
@@ -117,13 +120,13 @@ def main():
         for step, batch in enumerate(train_dataloader):
             start_time_iteration = time.time()
             rgb_images_gt = batch["rgb"].to(device)
-            # xyz_images_gt = batch["nocs"].to(device)
+            xyz_images_gt = batch["nocs"].to(device)
             star_image_gt = batch["star"].to(device)
             dash_image_gt = batch["dash"].to(device)
+            mask_image_gt = batch["mask"].to(device)
+            cam_R_m2c_gt = batch["cam_R_m2c"].to(device)
 
-            star_dash_estimated = generator(rgb_images_gt)
-            star_esimated = star_dash_estimated[:, :, 0:3]
-            dash_estimated = star_dash_estimated[:, :, 3:6]
+            estimated_star, estimated_dash, estimated_mask = generator(rgb_images_gt)
             
             
             

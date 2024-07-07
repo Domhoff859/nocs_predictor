@@ -1,24 +1,20 @@
 import os
 import numpy as np
-import PIL
 from PIL import Image
 from torch.utils.data import Dataset
-from torchvision import transforms
 import cv2
 
-from transformers import AutoImageProcessor, AutoModel
 from imgaug import augmenters as iaa
 import imgaug.augmenters as iaa  # noqa
-from tqdm import tqdm
-import sys
 import random
-import imageio 
 
 
 class NOCSBase(Dataset):
     def __init__(self, data_root, size, obj_id, augmentation_prob, fraction=1.0, crop_object=False, augment=False, interpolation="bicubic"):
         self.rgb_paths, self.nocs_paths = [], []
         self.star_paths, self.dash_paths = [], []
+        self.mask_paths = []
+        self.cam_R_m2c_paths = []
 
         self.size = size
         self.augemtation_prob = augmentation_prob
@@ -32,11 +28,15 @@ class NOCSBase(Dataset):
         nocs_root = os.path.join(data_root, "nocs")
         star_root = os.path.join(data_root, "star")
         dash_root = os.path.join(data_root, "dash")
+        mask_root = os.path.join(data_root, "mask")
+        cam_R_m2c_root = os.path.join(data_root, "cam_R_m2c")
 
         rgb_files = [file for file in sorted(os.listdir(rgb_root)) if file.endswith(".png")]
         nocs_files = [file for file in sorted(os.listdir(nocs_root)) if file.endswith(".png")]
-        star_files = [file for file in sorted(os.listdir(star_root)) if file.endswith(".npy")]
-        dash_files = [file for file in sorted(os.listdir(dash_root)) if file.endswith(".npy")]
+        star_files = [file for file in sorted(os.listdir(star_root)) if file.endswith(".png")]
+        dash_files = [file for file in sorted(os.listdir(dash_root)) if file.endswith(".png")]
+        mask_files = [file for file in sorted(os.listdir(mask_root)) if file.endswith(".png")]
+        cam_R_m2c_files = [file for file in sorted(os.listdir(cam_R_m2c_root)) if file.endswith(".npy")]
 
         # Determine how many samples to load based on fraction
         num_samples = int(len(rgb_files) * self.fraction)
@@ -46,11 +46,15 @@ class NOCSBase(Dataset):
         selected_nocs_files = [nocs_files[i] for i in selected_indices]
         selected_star_files = [star_files[i] for i in selected_indices]
         selected_dash_files = [dash_files[i] for i in selected_indices]
+        selected_mask_files = [mask_files[i] for i in selected_indices]
+        selected_cam_R_m2c_files = [cam_R_m2c_files[i] for i in selected_indices]
         
-        self.rgb_paths.extend([os.path.join(rgb_root, l) for l in selected_rgb_files])
-        self.nocs_paths.extend([os.path.join(nocs_root, l) for l in selected_nocs_files])
-        self.star_paths.extend([os.path.join(star_root, l) for l in selected_star_files])
-        self.dash_paths.extend([os.path.join(dash_root, l) for l in selected_dash_files])
+        self.rgb_paths.extend([os.path.join(rgb_root, name) for name in selected_rgb_files])
+        self.nocs_paths.extend([os.path.join(nocs_root, name) for name in selected_nocs_files])
+        self.star_paths.extend([os.path.join(star_root, name) for name in selected_star_files])
+        self.dash_paths.extend([os.path.join(dash_root, name) for name in selected_dash_files])
+        self.mask_paths.extend([os.path.join(mask_root, name) for name in selected_mask_files])
+        self.cam_R_m2c_paths.extend([os.path.join(cam_R_m2c_root, name) for name in selected_cam_R_m2c_files])
 
         self.interpolation = {"bilinear": Image.BILINEAR,
                               "bicubic": Image.BICUBIC,
@@ -64,10 +68,12 @@ class NOCSBase(Dataset):
         self._length = len(self.rgb_paths)
 
         self.labels = {
-            "rgb_file_path_": [l for l in self.rgb_paths],
-            "nocs_file_path_": [l for l in self.nocs_paths],
-            "star_file_path_": [l for l in self.star_paths],
-            "dash_file_path_": [l for l in self.dash_paths],
+            "rgb_file_path_": [path for path in self.rgb_paths],
+            "nocs_file_path_": [path for path in self.nocs_paths],
+            "star_file_path_": [path for path in self.star_paths],
+            "dash_file_path_": [path for path in self.dash_paths],
+            "mask_file_path_": [path for path in self.mask_paths],
+            "cam_R_m2c_file_path_": [path for path in self.cam_R_m2c_paths],
         }
 
     def __len__(self):
@@ -157,12 +163,13 @@ class NOCSBase(Dataset):
 
     def __getitem__(self, i):
         nocs_img_array = (self.process_image(self.labels["nocs_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
-        star_img_array = np.array(np.load(self.labels["star_file_path_"][i]) / 127.5 - 1.0, dtype=np.float32)
-        dash_img_array = np.array(np.load(self.labels["dash_file_path_"][i]) / 127.5 - 1.0, dtype=np.float32)
+        star_img_array = (self.process_image(self.labels["star_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
+        dash_img_array = (self.process_image(self.labels["dash_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
         rgb_img_raw = self.process_image(self.labels["rgb_file_path_"][i], size=self.size, image_type="RGB")
+        mask_img_raw = self.process_image(self.labels["mask_file_path_"][i], size=self.size, image_type="mask")
+        cam_R_m2c = self.labels["cam_R_m2c_file_path_"][i]
 
-        if self.augment == True:
-            #rgb_img_raw = self.color_augmentation(image=rgb_img_raw)
+        if self.augment:
             rgb_img_raw = self.apply_cutouts(rgb_img_raw, prob=self.augemtation_prob, size=int(self.size / 6), min_cutouts=5, max_cutouts=12)
 
         rgb_img_array = (rgb_img_raw / 127.5 - 1.0).astype(np.float32)
@@ -177,6 +184,8 @@ class NOCSBase(Dataset):
             "nocs": nocs_img_array,
             "star": star_img_array,
             "dash": dash_img_array,
+            "mask": mask_img_raw,
+            "cam_R_m2c": cam_R_m2c,
         }
         return example
 
