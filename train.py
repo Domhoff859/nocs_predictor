@@ -128,9 +128,12 @@ def main():
 
             estimated_star, estimated_dash, estimated_mask = generator(rgb_images_gt)
             
+            mse_loss_star = mse_loss_star(estimated_star*mask_image_gt, star_image_gt*mask_image_gt)
+            mse_loss_dash = mse_loss_dash(estimated_dash*mask_image_gt, dash_image_gt*mask_image_gt)
+            mse_loss_mask = mse_loss_mask(estimated_mask, mask_image_gt)
             
             
-            
+            output = mse_loss_star + mse_loss_dash + mse_loss_mask
             # output = mse_loss(xyz_images_estimated, xyz_images_gt)
             # loss_transformer = transformer_loss([input, target])   -> needs to be modified
 
