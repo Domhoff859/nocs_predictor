@@ -173,6 +173,7 @@ def main():
 
             iteration += 1
 
+        iteration = 0
         elapsed_time_epoch = time.time() - start_time_epoch
         print("Time for the whole epoch: {:.4f} seconds".format(elapsed_time_epoch))
 
