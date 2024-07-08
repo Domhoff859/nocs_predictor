@@ -166,8 +166,8 @@ class NOCSBase(Dataset):
         star_img_array = (self.process_image(self.labels["star_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
         dash_img_array = (self.process_image(self.labels["dash_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
         rgb_img_raw = self.process_image(self.labels["rgb_file_path_"][i], size=self.size, image_type="RGB")
-        mask_img_raw = self.process_image(self.labels["mask_file_path_"][i], size=self.size, image_type="mask")
-        cam_R_m2c = self.labels["cam_R_m2c_file_path_"][i]
+        mask_img_raw = self.process_image(self.labels["mask_file_path_"][i], size=self.size, image_type="mask").astype(np.float32)
+        cam_R_m2c = np.load(self.labels["cam_R_m2c_file_path_"][i])
 
         if self.augment:
             rgb_img_raw = self.apply_cutouts(rgb_img_raw, prob=self.augemtation_prob, size=int(self.size / 6), min_cutouts=5, max_cutouts=12)

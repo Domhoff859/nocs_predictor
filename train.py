@@ -8,6 +8,7 @@ sys.path.append(ROOT_DIR)  # To find local version of the library
 sys.path.append("./bop_toolkit")
 
 import time
+import json
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +24,8 @@ from model import TransformerLoss as transformerLoss
 
 from nocs_dataset import NOCSTrain
 
+from star_dash.src.destar import DestarRepresentation
+
 def setup_environment():
     if len(sys.argv) != 4:
         print("Usage: python3 train.py <gpu_id> <obj_id> </path/to/dataset>")
@@ -32,6 +35,27 @@ def setup_environment():
         sys.argv[1] = ''
     os.environ['CUDA_VISIBLE_DEVICES'] = sys.argv[1]
      
+def load_destar_model_info(model_path: str , obj_id: str):
+    model_info: dict = {}
+    
+    with open(model_path, 'r') as f:
+        temp: dict = json.load(f)
+    
+    # Check if the object ID is present in the model info file    
+    assert obj_id in temp.keys(), "Object ID not found in the model info file"
+    
+    # Load the discrete symmetries if present
+    if "symmetries_discrete" in temp[obj_id].keys():
+        model_info['symmetries_discrete'] = [np.array(_).reshape((4,4)) for _ in temp[obj_id]["symmetries_discrete"]]
+    else:
+        model_info['symmetries_discrete'] = []
+        
+    # Check if continuous symmetries are present
+    model_info["symmetries_continuous"] = "symmetries_continuous" in temp[obj_id]
+        
+    return model_info
+     
+
 def main():
     setup_environment()
     
@@ -94,7 +118,7 @@ def main():
     # if('symmetries_continuous' in keys):
     #     sym_cont=True
 
-    generator = ae(input_resolution=256)
+    generator = ae(input_resolution=128)
     generator.to(device)
 
     #transformer_loss = transformerLoss(sym=sym_pool)
@@ -124,16 +148,18 @@ def main():
             star_image_gt = batch["star"].to(device)
             dash_image_gt = batch["dash"].to(device)
             mask_image_gt = batch["mask"].to(device)
-            cam_R_m2c_gt = batch["cam_R_m2c"].to(device)
+            # cam_R_m2c_gt = batch["cam_R_m2c"].to(device)
 
             estimated_star, estimated_dash, estimated_mask = generator(rgb_images_gt)
             
-            mse_loss_star = mse_loss_star(estimated_star*mask_image_gt, star_image_gt*mask_image_gt)
-            mse_loss_dash = mse_loss_dash(estimated_dash*mask_image_gt, dash_image_gt*mask_image_gt)
-            mse_loss_mask = mse_loss_mask(estimated_mask, mask_image_gt)
+            mask_image_gt = torch.stack([mask_image_gt], dim=1)
+            output_mask = mse_loss_mask(estimated_mask, mask_image_gt)
             
+            output_star = mse_loss_star(estimated_star*mask_image_gt, star_image_gt*mask_image_gt)
+            output_dash = mse_loss_dash(estimated_dash*mask_image_gt, dash_image_gt*mask_image_gt)
             
-            output = mse_loss_star + mse_loss_dash + mse_loss_mask
+            output = output_star + output_dash + output_mask
+            
             # output = mse_loss(xyz_images_estimated, xyz_images_gt)
             # loss_transformer = transformer_loss([input, target])   -> needs to be modified
 
@@ -153,13 +179,34 @@ def main():
         imgfn = obj_val_img_dir + "/{:03d}.jpg".format(epoch)
 
 
-        gen_images = generator(rgb_images_gt)
-        f,ax = plt.subplots(10,3,figsize=(10,20))
+        gen_star, gen_dash, gen_mask = generator(rgb_images_gt)
+        
+        # Calculate the DESTAR representation
+        destar_model_info = load_destar_model_info(os.path.join(dataset_path, 'models_info.json'), obj_id)
+        destar = DestarRepresentation(model_info=destar_model_info)
+        
+        f,ax = plt.subplots(10,6,figsize=(10,20))
 
         for i in range(10):
-            ax[i,0].imshow( ( (xyz_images_gt[i]+1)/2).detach().cpu().numpy().transpose(1, 2, 0) )
-            ax[i,1].imshow( ( (rgb_images_gt[i]+1)/2).detach().cpu().numpy().transpose(1, 2, 0)  )
-            ax[i,2].imshow( ( (gen_images[i]+1)/2).detach().cpu().numpy().transpose(1, 2, 0) )
+            cpu_gen_star = gen_star[i].detach().cpu().numpy().transpose(1, 2, 0)
+            cpu_gen_dash = gen_dash[i].detach().cpu().numpy().transpose(1, 2, 0)
+            cpu_gen_mask = gen_mask[i].detach().cpu().numpy().transpose(1, 2, 0)
+            
+            cpu_gen_nocs = destar.calculate(star=cpu_gen_star[np.newaxis, ...], dash=cpu_gen_dash[np.newaxis, ...], isvalid=cpu_gen_mask[np.newaxis, ...])
+            cpu_gen_nocs = cpu_gen_nocs.squeeze(0)
+            
+            ax[i,0].set_title("RGB")
+            ax[i,0].imshow( ( (rgb_images_gt[i]+1)/2).detach().cpu().numpy().transpose(1, 2, 0)  )
+            ax[i,1].set_title("GT Nocs")
+            ax[i,1].imshow( ( (xyz_images_gt[i]+1)/2).detach().cpu().numpy().transpose(1, 2, 0) )
+            ax[i,2].set_title("Gen Nocs")
+            ax[i,2].imshow( ( (cpu_gen_nocs+1)/2))
+            ax[i,3].set_title("Gen Star")
+            ax[i,3].imshow( ( (cpu_gen_star+1)/2))
+            ax[i,4].set_title("Gen Dash")
+            ax[i,4].imshow( ( (cpu_gen_dash+1)/2))
+            ax[i,5].set_title("Gen Mask")
+            ax[i,5].imshow( ( (cpu_gen_mask+1)/2))
         plt.savefig(imgfn)
         plt.close()
         

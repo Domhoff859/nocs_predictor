@@ -132,13 +132,13 @@ class Autoencoder(nn.Module):
         f4 = f4.contiguous()
 
         x = f4.view(f4.size(0), -1)
-        #x = f4.view(f4.size(0), -1)
+        # x = f4.view(f4.size(0), -1)
         x = self.bottleneck(x)
-        #print("bottleneck:", x.shape)
+        # print("bottleneck:", x.shape)
         
         #x = x.view(x.size(0), 256, 8, 8)
         d1 = self.decoder[0](x)
-        #print("d1:", d1.shape)
+        # print("d1:", d1.shape)
         d1 = self.decoder[1](d1)
         #print("d1:", d1.shape)        
         d1 = self.decoder[2](d1)        
@@ -148,16 +148,17 @@ class Autoencoder(nn.Module):
         #print("d1_uni:", d1_uni.shape)
 
         d2 = self.decoder[4](d1_uni)
-        #print("d2:", d2.shape)       
+        # print("d2:", d2.shape)       
         d2_uni = torch.cat([d2, f2_2], dim=1)
         d2_uni = self.decoder[5](d2_uni)
-        #print("d2_uni:", d2_uni.shape)
+        # print("d2_uni:", d2_uni.shape)
         
         d3 = self.decoder[6](d2_uni)
-        #print("d3:", d3.shape)        
-        d3_uni = torch.cat([d3, f1_2], dim=1)    
-        d3_uni = self.decoder[7](d3_uni) 
-        #print("d3_uni:", d3_uni.shape)        
+        # print("d3:", d3.shape)
+
+        d3_uni = torch.cat([d3, f1_2], dim=1)
+        d3_uni = self.decoder[7](d3_uni)
+        # print("d3_uni:", d3_uni.shape)
 
         decoded_star = self.final_decoder_star(d3_uni)
         decoded_dash = self.final_decoder_dash(d3_uni)
