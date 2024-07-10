@@ -1,0 +1,20 @@
+services:
+  nocs-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # command: nvidia-smi
+    volumes:
+      - .:/workspace/
+      - /home/domin/Documents/Datasets/:/workspace/datasets/
+    ports:
+      - 8888:8888
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    container_name: robot_vision24

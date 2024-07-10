@@ -147,18 +147,14 @@ def main():
             xyz_images_gt = batch["nocs"].to(device)
             star_image_gt = batch["star"].to(device)
             dash_image_gt = batch["dash"].to(device)
-            mask_image_gt = batch["mask"].to(device)
-            # cam_R_m2c_gt = batch["cam_R_m2c"].to(device)
+            cam_R_m2c_gt = batch["cam_R_m2c"]
 
-            estimated_star, estimated_dash, estimated_mask = generator(rgb_images_gt)
+            estimated_star, estimated_dash = generator(rgb_images_gt)
             
-            mask_image_gt = torch.stack([mask_image_gt], dim=1)
-            output_mask = mse_loss_mask(estimated_mask, mask_image_gt)
+            output_star = mse_loss_star(estimated_star, star_image_gt)
+            output_dash = mse_loss_dash(estimated_dash, dash_image_gt)
             
-            output_star = mse_loss_star(estimated_star*mask_image_gt, star_image_gt*mask_image_gt)
-            output_dash = mse_loss_dash(estimated_dash*mask_image_gt, dash_image_gt*mask_image_gt)
-            
-            output = output_star + output_dash + output_mask
+            output = output_star + output_dash
             
             # output = mse_loss(xyz_images_estimated, xyz_images_gt)
             # loss_transformer = transformer_loss([input, target])   -> needs to be modified
@@ -179,22 +175,36 @@ def main():
 
         imgfn = obj_val_img_dir + "/{:03d}.jpg".format(epoch)
 
-
-        gen_star, gen_dash, gen_mask = generator(rgb_images_gt)
+        # Get the generated Star and Dash representation
+        gen_star, gen_dash = generator(rgb_images_gt)
+        
+        # Move everything from the GPU to the CPU
+        cpu_gen_star = gen_star.detach().cpu().numpy()
+        cpu_gen_dash = gen_dash.detach().cpu().numpy()
+        cpu_gt_star = star_image_gt.detach().cpu().numpy()
+        cpu_gt_dash = dash_image_gt.detach().cpu().numpy()
+        
+        cpu_gen_mask = np.zeros(shape=(cpu_gen_star.shape[0], cpu_gen_star.shape[2], cpu_gen_star.shape[3]))
+        condition_star = np.any(cpu_gen_star > 0.02, axis=1)
+        condition_dash = np.any(cpu_gen_dash > 0.02, axis=1)
+        
+        cpu_gen_mask[condition_star | condition_dash] = 1
         
         # Calculate the DESTAR representation
         destar_model_info = load_destar_model_info(os.path.join(dataset_path, 'models_info.json'), obj_id)
         destar = DestarRepresentation(model_info=destar_model_info)
         
-        f,ax = plt.subplots(10,6,figsize=(10,20))
+        f,ax = plt.subplots(10,8,figsize=(10,20))
 
         for i in range(10):
-            cpu_gen_star = gen_star[i].detach().cpu().numpy().transpose(1, 2, 0)
-            cpu_gen_dash = gen_dash[i].detach().cpu().numpy().transpose(1, 2, 0)
-            cpu_gen_mask = gen_mask[i].detach().cpu().numpy().transpose(1, 2, 0)
+            cpu_gen_star_image = cpu_gen_star[i].transpose(1, 2, 0)
+            cpu_gen_dash_image = cpu_gen_dash[i].transpose(1, 2, 0)
+            cpu_gen_mask_image = cpu_gen_mask[i][..., np.newaxis]
+            cpu_gt_star_image = cpu_gt_star[i].transpose(1, 2, 0)
+            cpu_gt_dash_image = cpu_gt_dash[i].transpose(1, 2, 0)
             
-            cpu_gen_nocs = destar.calculate(star=cpu_gen_star[np.newaxis, ...], dash=cpu_gen_dash[np.newaxis, ...], isvalid=cpu_gen_mask[np.newaxis, ...])
-            cpu_gen_nocs = cpu_gen_nocs.squeeze(0)
+            cpu_gen_nocs = destar.calculate(star=cpu_gen_star_image[np.newaxis, ...], dash=cpu_gen_dash_image[np.newaxis, ...], isvalid=cpu_gen_mask_image[np.newaxis, ...], train_R=cam_R_m2c_gt[i][np.newaxis, ...])
+            cpu_gen_nocs = cpu_gen_nocs.squeeze(0) * np.sqrt(2)
             
             ax[i,0].set_title("RGB")
             ax[i,0].imshow( ( (rgb_images_gt[i]+1)/2).detach().cpu().numpy().transpose(1, 2, 0)  )
@@ -203,11 +213,15 @@ def main():
             ax[i,2].set_title("Gen Nocs")
             ax[i,2].imshow( ( (cpu_gen_nocs+1)/2))
             ax[i,3].set_title("Gen Star")
-            ax[i,3].imshow( ( (cpu_gen_star+1)/2))
-            ax[i,4].set_title("Gen Dash")
-            ax[i,4].imshow( ( (cpu_gen_dash+1)/2))
-            ax[i,5].set_title("Gen Mask")
-            ax[i,5].imshow( ( (cpu_gen_mask+1)/2))
+            ax[i,3].imshow( ( (cpu_gen_star_image+1)/2))
+            ax[i,4].set_title("GT Star")
+            ax[i,4].imshow( ( (cpu_gt_star_image+1)/2))
+            ax[i,5].set_title("Gen Dash")
+            ax[i,5].imshow( ( (cpu_gen_dash_image+1)/2))
+            ax[i,6].set_title("GT Dash")
+            ax[i,6].imshow( ( (cpu_gt_dash_image+1)/2))
+            ax[i,7].set_title("Gen Mask")
+            ax[i,7].imshow( ( (cpu_gen_mask_image+1)/2))
         plt.savefig(imgfn)
         plt.close()
         
