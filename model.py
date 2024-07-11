@@ -108,6 +108,10 @@ class Autoencoder(nn.Module):
             nn.ConvTranspose2d(128, 3, kernel_size=5, stride=2, padding=2, output_padding=1),
             nn.Tanh()
         )
+        self.final_decoder_mask = nn.Sequential(
+            nn.ConvTranspose2d(128, 1, kernel_size=5, stride=2, padding=2, output_padding=1),
+            nn.Tanh()
+        )
 
     def forward(self, x):
         f1_1 = self.encoder[0](x)
@@ -158,5 +162,6 @@ class Autoencoder(nn.Module):
 
         decoded_star = self.final_decoder_star(d3_uni)
         decoded_dash = self.final_decoder_dash(d3_uni)
+        decoded_mask = self.final_decoder_mask(d3_uni)
 
-        return decoded_star, decoded_dash
+        return decoded_star, decoded_dash, decoded_mask

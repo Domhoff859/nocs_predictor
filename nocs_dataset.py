@@ -84,8 +84,10 @@ class NOCSBase(Dataset):
             image = Image.open(file_path).convert("RGB")
         elif image_type == "mask":
             image = Image.open(file_path).convert("1")  # Convert to binary mode
+        elif image_type == "StarDash":
+            image = np.array(Image.open(file_path), dtype=np.uint8)[:,:,::-1]
         else:
-            raise ValueError("Invalid image type. Supported types are 'RGB' and 'mask'.")
+            raise ValueError("Invalid image type. Supported types are 'RGB', 'mask' and 'StarDash.")
 
         img_array = np.array(image).astype(np.uint8)
         crop = min(img_array.shape[0], img_array.shape[1])
@@ -162,9 +164,9 @@ class NOCSBase(Dataset):
         return image_augmented
 
     def __getitem__(self, i):
-        nocs_img_array = (self.process_image(self.labels["nocs_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
-        star_img_array = (self.process_image(self.labels["star_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
-        dash_img_array = (self.process_image(self.labels["dash_file_path_"][i], size=self.size, image_type="RGB") / 127.5 - 1.0).astype(np.float32)
+        nocs_img_array = (self.process_image(self.labels["nocs_file_path_"][i], size=self.size, image_type="RGB").astype(np.float32) / 127.5 - 1.0)
+        star_img_array = (self.process_image(self.labels["star_file_path_"][i], size=self.size, image_type="StarDash").astype(np.float32) / 127.5 - 1.0)
+        dash_img_array = (self.process_image(self.labels["dash_file_path_"][i], size=self.size, image_type="StarDash").astype(np.float32) / 127.5 - 1.0)
         rgb_img_raw = self.process_image(self.labels["rgb_file_path_"][i], size=self.size, image_type="RGB")
         mask_img_raw = self.process_image(self.labels["mask_file_path_"][i], size=self.size, image_type="mask").astype(np.float32)
         cam_R_m2c = np.load(self.labels["cam_R_m2c_file_path_"][i])
@@ -184,7 +186,7 @@ class NOCSBase(Dataset):
             "nocs": nocs_img_array,
             "star": star_img_array,
             "dash": dash_img_array,
-            "mask": mask_img_raw,
+            "mask": mask_img_raw[np.newaxis,...],
             "cam_R_m2c": cam_R_m2c,
         }
         return example
