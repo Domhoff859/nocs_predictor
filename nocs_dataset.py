@@ -16,13 +16,14 @@ import imageio
 
 
 class NOCSBase(Dataset):
-    def __init__(self, data_root, size, obj_id, fraction=1.0, crop_object=False, augment=False, interpolation="bicubic"):
+    def __init__(self, data_root, size, obj_id, augmentation_prob, fraction=1.0, crop_object=False, augment=False, interpolation="bicubic"):
         self.rgb_paths, self.nocs_paths = [], []
 
         self.size = size
         self.fraction = fraction
         self.crop_object  = crop_object
-        self.augment = augment    
+        self.augment = augment  
+        self.augmentation_prob = augmentation_prob
 
         data_root = data_root + "/" + str(obj_id)
         
@@ -149,7 +150,7 @@ class NOCSBase(Dataset):
 
         if self.augment == True:
             #rgb_img_raw = self.color_augmentation(image=rgb_img_raw)
-            rgb_img_raw = self.apply_cutouts(rgb_img_raw, prob=0.5, size=int(self.size / 6), min_cutouts=5, max_cutouts=12)
+            rgb_img_raw = self.apply_cutouts(rgb_img_raw, prob=self.augmentation_prob, size=int(self.size / 6), min_cutouts=5, max_cutouts=12)
 
         rgb_img_array = (rgb_img_raw / 127.5 - 1.0).astype(np.float32)
         rgb_img_array = np.transpose(rgb_img_array, (2, 0, 1))

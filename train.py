@@ -24,8 +24,8 @@ from model import TransformerLoss as transformerLoss
 from nocs_dataset import NOCSTrain
 
 def setup_environment(gpu_id):
-    if len(sys.argv) != 3:
-        print("Usage: python3 train.py <gpu_id> <obj_id>")
+    if len(sys.argv) != 4:
+        print("Usage: python3 train.py <gpu_id> <obj_id> </path/to/dataset>")
         sys.exit()
 
     if gpu_id == '-1':
@@ -33,7 +33,7 @@ def setup_environment(gpu_id):
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
      
 def main():
-    max_epochs = 50
+    max_epochs = 51
     batch_size = 16
 
     augmentation_prob=1.0
@@ -46,9 +46,10 @@ def main():
     setup_environment(sys.argv[1])
     
     obj_id = sys.argv[2]
+    dataset_path = sys.argv[3]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset_train = NOCSTrain(data_root = "/hdd2/nocs_category_level_v2", size=256, obj_id=obj_id, crop_object = True, fraction=1.0, augment=True)
+    dataset_train = NOCSTrain(data_root = dataset_path, size=imsize, obj_id=obj_id, augmentation_prob=augmentation_prob, crop_object = True, fraction=1.0, augment=True)
     
     train_dataloader = torch.utils.data.DataLoader(
         dataset_train,
@@ -92,7 +93,7 @@ def main():
     # if('symmetries_continuous' in keys):
     #     sym_cont=True
 
-    generator = ae(input_resolution=256)
+    generator = ae(input_resolution=imsize)
     generator.to(device)
 
     #transformer_loss = transformerLoss(sym=sym_pool)
@@ -109,7 +110,7 @@ def main():
 
     total_iterations = len(train_dataloader)
     print("total iterations per epoch: ", total_iterations)
-
+    global_start_time = time.time()
     for epoch in range(max_epochs):
         start_time_epoch = time.time()
         for step, batch in enumerate(train_dataloader):
@@ -130,6 +131,8 @@ def main():
             print("Epoch {:02d}, Iteration {:03d}/{:03d}, Recon Loss: {:.4f}, lr_gen: {:.6f}, Time per Iteration: {:.4f} seconds".format(epoch, iteration + 1, total_iterations, output, lr_current, elapsed_time_iteration))
 
             iteration += 1
+        
+        iteration = 0
 
         elapsed_time_epoch = time.time() - start_time_epoch
         print("Time for the whole epoch: {:.4f} seconds".format(elapsed_time_epoch))
@@ -152,7 +155,9 @@ def main():
         if epoch % 5 == 0:
             torch.save(generator.state_dict(), os.path.join(obj_weight_dir, f'generator_epoch_{epoch}.pth'))
         epoch += 1
-
+        
+    print("Total time taken: {:.4f} seconds".format(time.time() - global_start_time))
+    
 # Run the main function
 if __name__ == "__main__":
     main()
