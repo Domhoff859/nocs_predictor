@@ -117,7 +117,7 @@ def main():
 
     total_iterations = len(train_dataloader)
     print("total iterations per epoch: ", total_iterations)
-
+    start_time_global = time.time()
     for epoch in range(max_epochs):
         start_time_epoch = time.time()
         for step, batch in enumerate(train_dataloader):
@@ -278,7 +278,9 @@ def main():
         if epoch % 5 == 0:
             torch.save(generator.state_dict(), os.path.join(obj_weight_dir, f'generator_epoch_{epoch}.pth'))
         epoch += 1
+        
+    print("Total training time taken: {:.4f} seconds".format(time.time() - start_time_global))
 
 # Run the main function
-if __name__ == "__main__":    
+if __name__ == "__main__":
     main()

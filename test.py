@@ -72,6 +72,9 @@ destar = DestarRepresentation(model_info=model_info[obj_id])
 cpu_estimated_nocs = destar.calculate(star=cpu_estimated_star[np.newaxis,...], dash=cpu_estimated_dash[np.newaxis,...], isvalid=cpu_estimated_mask, train_R=train_R[np.newaxis, ...])
 cpu_estimated_nocs = cpu_estimated_nocs.squeeze(axis=0)
 
+
+# Mean(MSE(nocs_image, cpu_estimated_nocs))
+
 f, ax = plt.subplots(2, 5, figsize=(20, 10))
 ax[0, 0].imshow(rgb_image)
 ax[0, 1].set_title('Star')
