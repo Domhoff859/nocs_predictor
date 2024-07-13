@@ -8,12 +8,13 @@ import json
 from model import Autoencoder as ae
 from tqdm import tqdm
 
-show_plots = False
+
 number_plots = 10
 
 
 obj_id = '1'
-dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_360_notilt'
+dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
+# dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_360_notilt'
 
 # Specify the path to the saved weights file
 weights_path = '/home/domin/Documents/Datasets/Weights StarDash/tless/weights/' + obj_id + "/" +"generator_epoch_50.pth"
@@ -38,8 +39,10 @@ train_R_folder_path = os.path.join(dataset_path, obj_id, 'cam_R_m2c')
 
 # Pick one random image from the star_path
 star_files = os.listdir(star_folder_path)
-# random_files: str = np.random.choice(star_files, size=number_plots)
-random_files = star_files
+show_plots = True
+random_files: str = np.random.choice(star_files, size=number_plots)
+# random_files = star_files
+
 
 if show_plots:
     f, ax = plt.subplots(number_plots, 9, figsize=(50, 50))
@@ -68,7 +71,8 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     with open(model_info_path, 'r') as file:
         model_info = json.load(file)
 
-    rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
+    if 'tilt' not in dataset_path:
+        rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
     rgb_img_array = (rgb_image / 127.5 - 1.0).astype(np.float32)
     rgb_img_array = np.transpose(rgb_img_array, (2, 0, 1))
     rgb_img_array = torch.from_numpy(rgb_img_array)#.to(torch.device('cuda'))
