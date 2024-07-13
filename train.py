@@ -41,7 +41,7 @@ def load_destar_model_info(model_path: str , obj_id: str):
     with open(model_path, 'r') as f:
         temp: dict = json.load(f)
     
-    # Check if the object ID is present in the model info file    
+    # Check if the object ID is present in the model info file
     assert obj_id in temp.keys(), "Object ID not found in the model info file"
     
     # Load the discrete symmetries if present
