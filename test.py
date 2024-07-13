@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from star_dash.src.destar import DestarRepresentation
 import json
 from model import Autoencoder as ae
-
+from tqdm import tqdm
 
 show_plot = False
 number_plots = 10
@@ -43,14 +43,17 @@ if show_plot:
     
 dataset_mse = 0
 
-for i, random_file in enumerate(random_files):
+for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     rgb_path = os.path.join(rgb_folder_path, random_file)
     nocs_path = os.path.join(nocs_folder_path, random_file)
     mask_path = os.path.join(mask_folder_path, random_file)
 
     rgb_image = np.array(Image.open(rgb_path).convert('RGB'), dtype=np.uint8)
     nocs_image = np.array(Image.open(nocs_path), dtype=np.uint8)
-    mask_image = np.array(Image.open(mask_path), dtype=np.float64)#[...,np.newaxis]
+    if "tilt" in dataset_path:
+        mask_image = np.array(Image.open(mask_path), dtype=np.float64)
+    else:
+        mask_image = np.array(Image.open(mask_path), dtype=np.float64)[...,np.newaxis]
 
     #rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
     rgb_img_array = (rgb_image / 127.5 - 1.0).astype(np.float32)
