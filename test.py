@@ -6,12 +6,14 @@ from matplotlib import pyplot as plt
 from star_dash.src.destar import DestarRepresentation
 import json
 from model import Autoencoder as ae
+from tqdm import tqdm
 
+show_plots = False
 number_plots = 10
 
 
 obj_id = '1'
-dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
+dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_360_notilt'
 
 # Specify the path to the saved weights file
 weights_path = '/home/domin/Documents/Datasets/Weights StarDash/tless/weights/' + obj_id + "/" +"generator_epoch_50.pth"
@@ -36,13 +38,15 @@ train_R_folder_path = os.path.join(dataset_path, obj_id, 'cam_R_m2c')
 
 # Pick one random image from the star_path
 star_files = os.listdir(star_folder_path)
-random_files: str = np.random.choice(star_files, size=number_plots)
+# random_files: str = np.random.choice(star_files, size=number_plots)
+random_files = star_files
 
-f, ax = plt.subplots(number_plots, 9, figsize=(50, 50))
+if show_plots:
+    f, ax = plt.subplots(number_plots, 9, figsize=(50, 50))
 
-for i, random_file in enumerate(random_files):
-    print(f'Processing {random_file}')
+dataset_mse = 0.0
 
+for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     rgb_path = os.path.join(rgb_folder_path, random_file)
     star_path = os.path.join(star_folder_path, random_file)
     dash_path = os.path.join(dash_folder_path, random_file)
@@ -55,7 +59,10 @@ for i, random_file in enumerate(random_files):
     star_image = np.array(Image.open(star_path), dtype=np.uint8)[:,:,::-1]
     dash_image = np.array(Image.open(dash_path), dtype=np.uint8)[:,:,::-1]
     nocs_image = np.array(Image.open(nocs_path), dtype=np.uint8)
-    mask_image = np.array(Image.open(mask_path), dtype=np.float64)[...,np.newaxis]
+    if 'tilt' in dataset_path:
+        mask_image = np.array(Image.open(mask_path), dtype=np.float64)
+    else:
+        mask_image = np.array(Image.open(mask_path), dtype=np.float64)[...,np.newaxis]
     train_R = np.load(train_R_path)
 
     with open(model_info_path, 'r') as file:
@@ -80,26 +87,32 @@ for i, random_file in enumerate(random_files):
     cpu_estimated_nocs = destar.calculate(star=cpu_estimated_star[np.newaxis,...], dash=cpu_estimated_dash[np.newaxis,...], isvalid=cpu_estimated_mask, train_R=train_R[np.newaxis, ...])
     cpu_estimated_nocs = cpu_estimated_nocs.squeeze(axis=0)
 
-
     # Mean(MSE(nocs_image, cpu_estimated_nocs))
-    ax[i, 0].set_title('RGB')
-    ax[i, 0].imshow(rgb_image)
-    ax[i, 1].set_title('GT Nocs')
-    ax[i, 1].imshow(nocs_image)
-    ax[i, 2].set_title('GEN Nocs')
-    ax[i, 2].imshow(cpu_estimated_nocs)
-    ax[i, 3].set_title('GT Star')
-    ax[i, 3].imshow(star_image)
-    ax[i, 4].set_title('GEN Star')
-    ax[i, 4].imshow(cpu_estimated_star)
-    ax[i, 5].set_title('GT Dash')
-    ax[i, 5].imshow(dash_image)
-    ax[i, 6].set_title('GEN Dash')
-    ax[i, 6].imshow(cpu_estimated_dash)
-    ax[i, 7].set_title('GT Mask')
-    ax[i, 7].imshow(mask_image)
-    ax[i, 8].set_title('GEN Mask')
-    ax[i, 8].imshow(cpu_estimated_mask)
-plt.tight_layout()
-plt.show()
-
+    dataset_mse += np.mean((nocs_image - cpu_estimated_nocs) ** 2)
+    
+    # Show some images
+    if show_plots:
+        ax[i, 0].set_title('RGB')
+        ax[i, 0].imshow(rgb_image)
+        ax[i, 1].set_title('GT Nocs')
+        ax[i, 1].imshow(nocs_image)
+        ax[i, 2].set_title('GEN Nocs')
+        ax[i, 2].imshow(cpu_estimated_nocs)
+        ax[i, 3].set_title('GT Star')
+        ax[i, 3].imshow(star_image)
+        ax[i, 4].set_title('GEN Star')
+        ax[i, 4].imshow(cpu_estimated_star)
+        ax[i, 5].set_title('GT Dash')
+        ax[i, 5].imshow(dash_image)
+        ax[i, 6].set_title('GEN Dash')
+        ax[i, 6].imshow(cpu_estimated_dash)
+        ax[i, 7].set_title('GT Mask')
+        ax[i, 7].imshow(mask_image)
+        ax[i, 8].set_title('GEN Mask')
+        ax[i, 8].imshow(cpu_estimated_mask)
+        
+if show_plots:
+    plt.tight_layout()
+    plt.show()
+    
+print(f'Mean MSE: {dataset_mse / number_plots}')
