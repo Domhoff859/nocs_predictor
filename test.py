@@ -55,12 +55,12 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     else:
         mask_image = np.array(Image.open(mask_path), dtype=np.float64)[...,np.newaxis]
 
-    if "tilt" not in dataset_path:
-        rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
+    # if "tilt" not in dataset_path:
+    #     rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
     rgb_img_array = (rgb_image / 127.5 - 1.0).astype(np.float32)
     rgb_img_array = np.transpose(rgb_img_array, (2, 0, 1))
     rgb_img_array = torch.from_numpy(rgb_img_array)#.to(torch.device('cuda'))
-
+    
     estimated_nocs = generator(rgb_img_array[np.newaxis, ...])
     
     cpu_estimated_nocs = estimated_nocs.detach().cpu().numpy().squeeze(0)
