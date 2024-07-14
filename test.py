@@ -8,11 +8,11 @@ import json
 from model import Autoencoder as ae
 from tqdm import tqdm
 
-show_plots = True
+show_plots = False
 number_plots = 10
 
 # 1, 5 ,21 ,27
-obj_id = '1'
+obj_id = '5'
 dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
 
 # Specify the path to the saved weights file
@@ -72,6 +72,15 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
 
     with open(model_info_path, 'r') as file:
         model_info = json.load(file)
+        if 'symmetries_continuous' in model_info[obj_id]:
+            model_info[obj_id]['symmetries_continuous'] = True
+        else:
+            model_info[obj_id]['symmetries_continuous'] = False
+            
+        if "symmetries_discrete" in model_info[obj_id]:
+            model_info[obj_id]["symmetries_discrete"] = [np.array(_).reshape((4,4)) for _ in model_info[obj_id]["symmetries_discrete"]]
+        else:
+            model_info[obj_id]["symmetries_discrete"] = []
 
     if 'tilt' not in dataset_path:
         rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
