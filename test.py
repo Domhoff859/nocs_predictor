@@ -8,11 +8,11 @@ import json
 from model import Autoencoder as ae
 from tqdm import tqdm
 
-show_plot = False
+show_plot = True
 number_plots = 10
 
 # 1, 4, 5, 9, 21, 27
-obj_id = '4'
+obj_id = '1'
 dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
 
 # Specify the path to the saved weights file
@@ -66,8 +66,10 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     estimated_nocs = generator(rgb_img_array[np.newaxis, ...])
     
     cpu_estimated_nocs = estimated_nocs.detach().cpu().numpy().squeeze(0)
-    cpu_estimated_nocs = (cpu_estimated_nocs.transpose(1, 2, 0) / 2 + 0.5) * 255
+    cpu_estimated_nocs = ((cpu_estimated_nocs.transpose(1, 2, 0) / 2 + 0.5) * 255).astype(np.uint8)
     
+    print(cpu_estimated_nocs.max())
+    print(nocs_image.max())
     # Mean(MSE(nocs_image, cpu_estimated_nocs))
     dataset_mse += np.mean((nocs_image - cpu_estimated_nocs) ** 2)
     
