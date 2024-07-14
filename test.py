@@ -11,8 +11,8 @@ from tqdm import tqdm
 show_plot = False
 number_plots = 10
 
-# 1, 5, 21, 27
-obj_id = '27'
+# 1, 4, 5, 9, 21, 27
+obj_id = '9'
 dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
 
 # Specify the path to the saved weights file
