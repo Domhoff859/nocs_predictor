@@ -11,12 +11,12 @@ from tqdm import tqdm
 show_plot = False
 number_plots = 10
 
-
-obj_id = '1'
+# 1, 5, 21, 27
+obj_id = '27'
 dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
 
 # Specify the path to the saved weights file
-weights_path = '/home/domin/Documents/Datasets/Weights Baseline/tless/weights/' + obj_id + "/" +"generator_epoch_50.pth"
+weights_path = '/home/domin/Documents/Datasets/Weights Baseline/tless_pbr/weights/' + obj_id + "/" +"generator_epoch_50.pth"
 
 # Create an instance of your model
 generator = ae(input_resolution=128)
@@ -35,8 +35,10 @@ mask_folder_path = os.path.join(dataset_path, obj_id, 'mask')
 
 # Pick one random image from the star_path
 nocs_files = os.listdir(nocs_folder_path)
-#random_files: str = np.random.choice(nocs_files, size=number_plots)
-random_files = nocs_files
+if show_plot: 
+    random_files: str = np.random.choice(nocs_files, size=number_plots)
+else:
+    random_files = nocs_files
 
 if show_plot:
     f, ax = plt.subplots(number_plots, 3, figsize=(50, 50))
