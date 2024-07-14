@@ -8,16 +8,15 @@ import json
 from model import Autoencoder as ae
 from tqdm import tqdm
 
-
+show_plots = True
 number_plots = 10
 
-
+# 1, 5 ,21 ,27
 obj_id = '1'
 dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
-# dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_360_notilt'
 
 # Specify the path to the saved weights file
-weights_path = '/home/domin/Documents/Datasets/Weights StarDash/tless/weights/' + obj_id + "/" +"generator_epoch_50.pth"
+weights_path = '/home/domin/Documents/Datasets/Weights StarDash/tless_pbr/weights/' + obj_id + "/" +"generator_epoch_50.pth"
 
 # Create an instance of your model
 generator = ae(input_resolution=128)
@@ -39,10 +38,11 @@ train_R_folder_path = os.path.join(dataset_path, obj_id, 'cam_R_m2c')
 
 # Pick one random image from the star_path
 star_files = os.listdir(star_folder_path)
-show_plots = False
-# random_files: str = np.random.choice(star_files, size=number_plots)
-random_files = star_files
 
+if show_plots:
+    random_files: str = np.random.choice(star_files, size=number_plots)
+else:
+    random_files = star_files
 
 if show_plots:
     f, ax = plt.subplots(number_plots, 9, figsize=(50, 50))
@@ -64,6 +64,8 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     nocs_image = np.array(Image.open(nocs_path), dtype=np.uint8)
     if 'tilt' in dataset_path:
         mask_image = np.array(Image.open(mask_path), dtype=np.float64)
+    elif 'models' in dataset_path:
+        mask_image = np.array(Image.open(mask_path), dtype=np.float64)
     else:
         mask_image = np.array(Image.open(mask_path), dtype=np.float64)[...,np.newaxis]
     train_R = np.load(train_R_path)
@@ -71,8 +73,8 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     with open(model_info_path, 'r') as file:
         model_info = json.load(file)
 
-    # if 'tilt' not in dataset_path:
-    #     rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
+    if 'tilt' not in dataset_path:
+        rgb_image = np.where(mask_image > 1.0, rgb_image, [0, 0, 0])
     rgb_img_array = (rgb_image / 127.5 - 1.0).astype(np.float32)
     rgb_img_array = np.transpose(rgb_img_array, (2, 0, 1))
     rgb_img_array = torch.from_numpy(rgb_img_array)#.to(torch.device('cuda'))
@@ -111,12 +113,12 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
         ax[i, 6].set_title('GEN Dash')
         ax[i, 6].imshow(cpu_estimated_dash)
         ax[i, 7].set_title('GT Mask')
-        ax[i, 7].imshow(mask_image)
+        ax[i, 7].imshow(mask_image.astype(np.uint8))
         ax[i, 8].set_title('GEN Mask')
-        ax[i, 8].imshow(cpu_estimated_mask)
+        ax[i, 8].imshow(cpu_estimated_mask.astype(np.uint8))
         
 if show_plots:
     plt.tight_layout()
     plt.show()
     
-print(f'Mean MSE: {dataset_mse / number_plots}')
+print(f'StarDash MSE: {dataset_mse / len(random_files)}')
