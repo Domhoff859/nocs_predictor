@@ -12,7 +12,7 @@ show_plot = False
 number_plots = 10
 
 # 1, 4, 5, 9, 21, 27
-obj_id = '9'
+obj_id = '4'
 dataset_path = '/home/domin/Documents/Datasets/tless/xyz_data_test'
 
 # Specify the path to the saved weights file
@@ -66,7 +66,7 @@ for i, random_file in tqdm(enumerate(random_files), total=len(random_files)):
     estimated_nocs = generator(rgb_img_array[np.newaxis, ...])
     
     cpu_estimated_nocs = estimated_nocs.detach().cpu().numpy().squeeze(0)
-    cpu_estimated_nocs = cpu_estimated_nocs.transpose(1, 2, 0) / 2 + 0.5
+    cpu_estimated_nocs = (cpu_estimated_nocs.transpose(1, 2, 0) / 2 + 0.5) * 255
     
     # Mean(MSE(nocs_image, cpu_estimated_nocs))
     dataset_mse += np.mean((nocs_image - cpu_estimated_nocs) ** 2)
